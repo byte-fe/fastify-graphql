@@ -10,9 +10,15 @@ function GraphQLPlugin(fastify: FastifyInstance<Server, IncomingMessage, Outgoin
   const handler = async (request: FastifyRequest<IncomingMessage>, reply: FastifyReply<OutgoingMessage>) => {
     try {
       let method = request.req.method;
+      let graphql = pluginOptions.graphql;
+      let ctxFn = graphql.context;
       const gqlResponse = await runHttpQuery([request, reply], {
         method : method,
-        options: pluginOptions.graphql,
+        options: Object.assign({}, graphql, {
+          context() {
+            return Object.assign({}, { request, reply }, typeof ctxFn === 'function' ? ctxFn.call(null) : ctxFn);
+          }
+        }),
         query  : method === 'POST' ? request.body : request.query,
       });
       
