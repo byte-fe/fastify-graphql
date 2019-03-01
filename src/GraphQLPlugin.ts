@@ -10,10 +10,19 @@ function GraphQLPlugin(fastify: FastifyInstance<Server, IncomingMessage, Outgoin
   const handler = async (request: FastifyRequest<IncomingMessage>, reply: FastifyReply<OutgoingMessage>) => {
     try {
       let method = request.req.method;
+      let graphql: Function | GraphQLOptions = pluginOptions.graphql;
+      let ctxFn: any = {}
+
+      if (<GraphQLOptions>graphql) {
+        ctxFn = (<GraphQLOptions>graphql).context;
+      }
+
       const gqlResponse = await runHttpQuery([request, reply], {
         method : method,
-        options: pluginOptions.graphql,
-        query  : method === 'POST' ? request.body : request.query,
+        options : Object.assign({}, graphql, {
+          context: () => Object.assign({ request, reply }, typeof ctxFn === 'function' ? ctxFn.call(null) : ctxFn),
+        }),
+        query : method === 'POST' ? request.body : request.query,
       });
       
       // bypass Fastify's response layer, so we can avoid having to
